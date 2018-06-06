@@ -438,8 +438,7 @@ C++调用调用js的类与C++调用js方法有些许类似，都是在脚本加�
     Local<Function> process_fun = Local<Function>::Cast(process_val);
     process_.Reset(v8Helper::GetIsolate(),process_fun);
 
-        
-    ```
+```
 
 ```JavaScript
    function Point(x,y){
@@ -453,6 +452,7 @@ C++调用调用js的类与C++调用js方法有些许类似，都是在脚本加�
     Point.prototype.z = 1000;
  
 ```
+
 首先将想要调用的js类的类名以字符串的形式转成v8能识别的字符串，然后``context -> Global() -> Get(js_data)`` , v8开始通过这个类名在js中找到相应的值,然后转通过相应的方法来先看看这个找出来的值是方法还是类，我们可以在脚本中看到这个值既是类又是方法,这其实是个构造方法,然后``Local<Object>::Cast(js_data_value);`` 将这个值转化成了js的类,接着``js_data_object -> CallAsConstructor(context, argc, argv).ToLocalChecked();`` ,是调用js类的构造方法并做一些属性的初始化操作,返回的就是js类的对象了,接下来就是用这个对象来调用js类的方法了,与之前C++调用js全局方法的方法是一样的。注意prototype是JavaScript类的一个关键字它可以指定类的属性，脚本中是把show()方法当做类的方法。可以用类的对象调用这个方法。
 
 
