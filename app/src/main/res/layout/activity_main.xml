@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.boyaa.v8demo.MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+             android:id="@+id/js_call_c_method"
+             android:layout_width="120dp"
+             android:layout_height="wrap_content"
+             android:text="JS调C++全局方法"
+             android:layout_weight="1"
+             android:layout_marginLeft="5dp"/>
+        <Button
+             android:id="@+id/js_create_c_object"
+             android:layout_width="120dp"
+             android:layout_height="wrap_content"
+             android:text="JS创建C++对象"
+             android:layout_weight="1"
+             android:layout_marginRight="5dp"/>
+
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/c_call_js_method"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:text="C++调JS全局方法"
+            android:layout_weight="1"
+            android:layout_marginLeft="5dp"/>
+        <Button
+            android:id="@+id/c_pass_object_toJs"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:text="C++传对象给JS"
+            android:layout_weight="1"
+            android:layout_marginRight="5dp"/>
+
+    </LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/c_call_js_object"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:layout_weight="1"
+            android:text="C++调JS类"/>
+        <Button
+            android:id="@+id/destory"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="5dp"
+            android:layout_weight="1"
+            android:visibility="invisible"
+            />
+    </LinearLayout>
+
+
+    <TextView
+       android:id="@+id/callback_content"
+       android:layout_width="match_parent"
+       android:layout_height="match_parent"
+       android:gravity="center"
+       android:text="callback info"/>
+
+</LinearLayout>
