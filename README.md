@@ -3,7 +3,7 @@
 
 
 
-###js调用C++的方法：
+### js调用C++的方法：
 
 ```c++
 v8Helper::Initialize();
@@ -79,7 +79,7 @@ var y = add(20, 30);
 print(y);
       
 ```
-不管是js调用C++的方法,还是C++调用js的方法，对这些方法的包装都应该是v8初始化完成后最先操作的。在``Local<Context> context =creatContext(v8Helper::GetIsolate());``之前的操作都是v8初始化常规代码我做了一些简单的封装，首先创建一个全局对象的模板然后绑定C++的方法到字符串上，js就可以用此字符串来调用绑定的方法。应该注意到这些绑定在执行js字符串之前就已经进行了。
+不管是js调用C++的方法,还是C++调用js的方法，对这些方法的包装都应该是v8初始化完成后最先操作的。在 ``Local<Context> context =creatContext(v8Helper::GetIsolate());`` 之前的操作都是v8初始化常规代码我做了一些简单的封装，首先创建一个全局对象的模板然后绑定C++的方法到字符串上，js就可以用此字符串来调用绑定的方法。应该注意到这些绑定在执行js字符串之前就已经进行了。
 
 ### C++调用js方法：
 
@@ -126,7 +126,7 @@ function jsFunction(){
 }
 ```
 
-注意 ``context_.Reset(GetIsolate(), context);``这一句是用来保存当前上下文句柄的，``process_.Reset(GetIsolate(), process_fun);``是用来保存在js找出来的方法的句柄的，这两句是我们在以后的任何时候都可以调用js方法的关键。中间的一些代码都很常规，就是找出js中的方法名然后转成方法。应该注意到找出js方法的操作是在脚本加载并且执行完之后进行的，这是因为如果在加载js脚本之前找js的方法是肯定找不到的。context_是Global<Context>类型，process_是Global<Function>类型，这两个全局类型的对象其实是用来保存当前的上下文环境和需要以后来执行的方法的句柄的。以后我们我们可以通过这两个句柄，进入到相应上下文环境中执行相应的方法。接下来看一下，我们是怎么在C++中调用在js中找出来的这个方法的：
+注意 ``context_.Reset(GetIsolate(), context);`` 这一句是用来保存当前上下文句柄的， ``process_.Reset(GetIsolate(), process_fun);`` 是用来保存在js找出来的方法的句柄的，这两句是我们在以后的任何时候都可以调用js方法的关键。中间的一些代码都很常规，就是找出js中的方法名然后转成方法。应该注意到找出js方法的操作是在脚本加载并且执行完之后进行的，这是因为如果在加载js脚本之前找js的方法是肯定找不到的。context_是Global<Context>类型，process_是Global<Function>类型，这两个全局类型的对象其实是用来保存当前的上下文环境和需要以后来执行的方法的句柄的。以后我们我们可以通过这两个句柄，进入到相应上下文环境中执行相应的方法。接下来看一下，我们是怎么在C++中调用在js中找出来的这个方法的：
 
 ```c++
 // Create a handle scope to keep the temporary object references.
@@ -152,7 +152,7 @@ String::Utf8Value error(v8Helper::GetIsolate(), try_catch.Exception());
       
 ```
 
-首先是创建一栈区域来保存当前临时对象引用。红框内的方法就是把之前保存``context_``，和``process_``对象中的句柄拿出来，先进入相应的上下文，然后在对应的上下文环境中拿到对应的方法来执行。基本C++调用js方法都是这个套路，这里argc为0是调用无参的js方法，调用有参的js方法，我还没试不过按照process.cc中的套路也应该没什么问题。
+首先是创建一栈区域来保存当前临时对象引用。红框内的方法就是把之前保存``context_`` ，和 ``process_`` 对象中的句柄拿出来，先进入相应的上下文，然后在对应的上下文环境中拿到对应的方法来执行。基本C++调用js方法都是这个套路，这里argc为0是调用无参的js方法，调用有参的js方法，我还没试不过按照process.cc中的套路也应该没什么问题。
 
 ##js调C++类:
 这里有两种情况：
@@ -185,6 +185,7 @@ if (!process->Call(context, context->Global(), argc, argv).ToLocal(&result)) {
 ```
 
 ```c++
+
 Local<Object> WrapPerson(Person *person) {
 //Local scope for temporary handles.
 EscapableHandleScope handle_scope(v8Helper::GetIsolate());
@@ -242,6 +243,7 @@ return handle_scope.Escape(result);
     }
 
     ```
+
 ```c++
 
     void GetName(Local<String> name, const PropertyCallbackInfo<Value>& info) {
@@ -267,7 +269,9 @@ return handle_scope.Escape(result);
 
     }
     ```
+
 ```c++
+
     Person* UnwrapPerson(Local<Object> obj) {
     Local<External> field = Local<External>::Cast(obj->GetInternalField(0));
     void* ptr = field->Value();
@@ -276,6 +280,7 @@ return handle_scope.Escape(result);
     ```
 
 ```JavaScript
+
    function jsFunction(person){
        print(person.name,person.age);
        person.setName("test");
@@ -285,10 +290,10 @@ return handle_scope.Escape(result);
     ```
 仔细看一下其实套路都是一样的，只不过是多了几步针对C++对象封装的专有步骤而已。主要的步骤就是先创建一个对象模板为这个对象模板绑定暴露给js访问C++对象的属性和方法的接口，注意对访问属性和访问方法的封装是不一样的，虽然这些套路都是固定的但也要注意其中的区别。
 
-以我传递的person对象为例，当我在js中用person.name来访问person的name属性的时候，v8实际上就会调用GetName(Local<String> name, const PropertyCallbackInfo<Value>& info)方法，通过回调的info参数来解包装，转成你传递的对像类型的指针后，再用这个指针来访问对象的成员方法getName()来获取name的值，然后再设置成返回值其实也就是person.name的值。访问方法也一样，比如在js中访问person.setName("123")，v8会调用SetName(const FunctionCallbackInfo <Value> &args);也是先解包装转换成你传递的对像类型的指针后再用对象的成员方法setName(*str(args.GetIsolate(),args[0]));通过v8回调给C++的参数来改变对象的属性值。注意以上person.name，person.setName("123"),name和setName都是你绑定对象模板时暴露给js接口的字符串，person也是你自己在js中使用的一个字符而已，你也可以用teacher，teacher.name。在模板创建完成后又经过了几个步骤主要是对刚才创建的模板与C++对象的关联。这些步骤完成后，一个C++对象就封装成为js对象了，然后把这个对象当做参数传给js，js就可以访问之前创建的模板上绑定的方法了。
+以我传递的person对象为例，当我在js中用person.name来访问person的name属性的时候，v8实际上就会调用 ``GetName(Local<String> name, const PropertyCallbackInfo<Value>& info)`` 方法，通过回调的info参数来解包装，转成你传递的对像类型的指针后，再用这个指针来访问对象的成员方法getName()来获取name的值，然后再设置成返回值其实也就是 ``person.name`` 的值。访问方法也一样，比如在js中访问 ``person.setName("123")`` ，v8会调用 ``SetName(const FunctionCallbackInfo <Value> &args)`` ;也是先解包装转换成你传递的对像类型的指针后再用对象的成员方法 ``setName(*str(args.GetIsolate(),args[0]));`` 通过v8回调给C++的参数来改变对象的属性值。注意以上 ``person.name`` ， ``person.setName("123")`` ,name和setName都是你绑定对象模板时暴露给js接口的字符串，person也是你自己在js中使用的一个字符而已，你也可以用teacher，teacher.name。在模板创建完成后又经过了几个步骤主要是对刚才创建的模板与C++对象的关联。这些步骤完成后，一个C++对象就封装成为js对象了，然后把这个对象当做参数传给js，js就可以访问之前创建的模板上绑定的方法了。
 
 第二种情况：
-在js中创建C++的对象去访问对象的属性和方法，重点是对构造函数的绑定，绑定的时机与一般函数即全局函数一样，在js文件加载之前就可绑定，注意是在creatTestContext(Isolate *isolate)这个方法中进行绑定。
+在js中创建C++的对象去访问对象的属性和方法，重点是对构造函数的绑定，绑定的时机与一般函数即全局函数一样，在js文件加载之前就可绑定，注意是在``creatContext(Isolate *isolate)`` 这个方法中进行绑定。
 
 ```c++
 
@@ -350,7 +355,9 @@ return handle_scope.Escape(result);
     object -> SetInternalField(0,v8::External::New(v8Helper::GetIsolate(),person));
     }
 ```
+
 ```JavaScript
+
     var per = new Person("JIMI",20);
     print(per.name,per.age);
     per.setName("test");
@@ -359,10 +366,10 @@ return handle_scope.Escape(result);
 
  ```
 
-在creatTestContext(Isolate *isolate)中先是为构造函数创建函数模板，并将其指向我们的构造函数，SetClassName是告诉js脚本C++对象的类型，就是来区分普通字符串和C++类的，InstanceTemplate()是获取C++实例模板，接下来就是为js中创建C++对象访问其属性和方法绑定的C++接口,与我们传递C++对象给js函数然后用对象访问属性和方法的绑定过程是一样的,最后一步是设置person(name，age)这个全局函数给js调用；
+在 ``creatContext(Isolate *isolate)`` 中先是为构造函数创建函数模板，并将其指向我们的构造函数，SetClassName是告诉js脚本C++对象的类型，就是来区分普通字符串和C++类的，InstanceTemplate()是获取C++实例模板，接下来就是为js中创建C++对象访问其属性和方法绑定的C++接口,与我们传递C++对象给js函数然后用对象访问属性和方法的绑定过程是一样的,最后一步是设置person(name，age)这个全局函数给js调用；
 构造函数的绑定需要注意一下，回调参数args数组索引对应着是初始化对象时的属性顺序，拿到属性值后，用这些属性值在C++中创建一个类的对象，然后再把对象指针设置到索引为0的地方,v8会在js中C++对象调用其属性和方法时从这个地方查询到真正的C++对象。
 
-###C++调js类:
+### C++调js类:
 C++调用调用js的类与C++调用js方法有些许类似，都是在脚本加载并运行之后进行的。看一下代码会发现调用过程有点复杂，但基本套路都是一样的。
 
 ```c++ 
@@ -440,7 +447,9 @@ C++调用调用js的类与C++调用js方法有些许类似，都是在脚本加�
 
         
     ```
+
 ```JavaScript
+
      function Point(x,y){
         this.x=x;
         this.y=y;
@@ -452,6 +461,6 @@ C++调用调用js的类与C++调用js方法有些许类似，都是在脚本加�
     Point.prototype.z = 1000;
  
     ```
-首先将想要调用的js类的类名以字符串的形式转成v8能识别的字符串，然后``context -> Global() -> Get(js_data)``, v8开始通过这个类名在js中找到相应的值,然后转通过相应的方法来先看看这个找出来的值是方法还是类，我们可以在脚本中看到这个值既是类又是方法,这其实是个构造方法,然后``Local<Object>::Cast(js_data_value);``将这个值转化成了js的类,接着``js_data_object -> CallAsConstructor(context, argc, argv).ToLocalChecked();``,是调用js类的构造方法并做一些属性的初始化操作,返回的就是js类的对象了,接下来就是用这个对象来调用js类的方法了,与之前C++调用js全局方法的方法是一样的。注意prototype是JavaScript类的一个关键字它可以指定类的属性，脚本中是把show()方法当做类的方法。可以用类的对象调用这个方法。
+首先将想要调用的js类的类名以字符串的形式转成v8能识别的字符串，然后``context -> Global() -> Get(js_data)`` , v8开始通过这个类名在js中找到相应的值,然后转通过相应的方法来先看看这个找出来的值是方法还是类，我们可以在脚本中看到这个值既是类又是方法,这其实是个构造方法,然后``Local<Object>::Cast(js_data_value);`` 将这个值转化成了js的类,接着``js_data_object -> CallAsConstructor(context, argc, argv).ToLocalChecked();`` ,是调用js类的构造方法并做一些属性的初始化操作,返回的就是js类的对象了,接下来就是用这个对象来调用js类的方法了,与之前C++调用js全局方法的方法是一样的。注意prototype是JavaScript类的一个关键字它可以指定类的属性，脚本中是把show()方法当做类的方法。可以用类的对象调用这个方法。
 
 
