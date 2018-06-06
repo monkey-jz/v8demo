@@ -1,8 +1,8 @@
 ##C++调用js方法：##
-我是按照v8给的sample中的process.cc中的实例做的，我们先考虑一个问题就是为什么C++要调用js的方法，在device中从来都是lua调用C++这是因为如果我们直接暴露C++的接口给js的话我们控制不了这些方法执行的时间，当js文件加载完v8初始化完做一些方法的绑定之后就直接执行了,device是通过引擎绘制的按钮的点击事件来控制方法的调用时机。当然js也可以通过绘制按钮增加点击事件来控制，但是目前阶段就我们而言还不需要做到这一步。因为OpenGL绘制的工作在onDrawFrame()中执行的，所以我们要确保js中绘制代码的方法在onDrawFrame()中执行，所以我们需要在js中加上一些方法，通过v8来让C++决定方法什么时候调用。比如像下面的一个js方法，逻辑应该是这样的，我们通过调用initView（这个方法是通过v8包装的，关于如何包装的下面会详细介绍这里先说逻辑）来调用我们在C++中暴露给js的绘制接口，这个方法我们需要在onDrawFrame()（jni方法）中。function initView(){draw();}
+我是按照v8给的sample中的process.cc中的实例加上网上搜索的一些资料做的，我们先考虑一个问题就是为什么C++要调用js的方法，在device中从来都是lua调用C++这是因为如果我们直接暴露C++的接口给js的话我们控制不了这些方法执行的时间，当js文件加载完v8初始化完做一些方法的绑定之后就直接执行了,device是通过引擎绘制的按钮的点击事件来控制方法的调用时机。当然js也可以通过绘制按钮增加点击事件来控制，但是目前阶段就我们而言还不需要做到这一步。因为OpenGL绘制的工作在onDrawFrame()中执行的，所以我们要确保js中绘制代码的方法在onDrawFrame()中执行，所以我们需要在js中加上一些方法，通过v8来让C++决定方法什么时候调用。比如像下面的一个js方法，逻辑应该是这样的，我们通过调用initView（这个方法是通过v8包装的，关于如何包装的下面会详细介绍这里先说逻辑）来调用我们在C++中暴露给js的绘制接口，这个方法我们需要在onDrawFrame()（jni方法）中。function initView(){draw();}
 有一个重要的问题就是关于v8初始化的时机，一开始我在Activity的onCreate()中单独用一个jni方法来初始化v8，其他关于v8的操作都是在onSurfaceChanged，onDrawFrame，onSurfaceCreated的jni方法中进行的，但是当我在onDrawFrame()的jni方法调用js方法initView()来绘制view的时候总是报错。在找不到原因后我把v8初始化的时机改成在onSurfaceCreated的jni方法中，由于v8只需初始化一次，所以要在清单文件中给游戏Activity的配置必须至少为android:configChanges="orientation|keyboardHidden|screenSize"；改完之后方法调用成功。这里的原因可能是v8初始化与运行的环境问题，暂时不明。下面来看一下具体逻辑C++调用js方法v8的封装逻辑：
 
-    ```java
+    ```cpp
 
     v8Helper::Initialize();
     Isolate::Scope isolate_scope(v8Helper::GetIsolate());
@@ -47,7 +47,7 @@
 
 不管是js调用C++的方法,还是C++调用js的方法，对这些方法的包装都应该是v8初始化完成后最先操作的。在``Local<Context> context =creatTestContext(v8Helper::GetIsolate());``之前的操作都是v8初始化常规代码我做了一些简单的封装，这个方法主要是来绑定C++暴露给js接口的所以暂时不讨论。注意 ``context_.Reset(GetIsolate(), context);``这一句是用来保存当前上下文句柄的，``process_.Reset(GetIsolate(), process_fun);``是用来保存在js找出来的方法的句柄的，这两句是我们在以后的任何时候都可以调用js方法的关键。中间的一些代码都很常规，就是找出js中的方法名然后转成方法。应该注意到找出js方法的操作是在脚本加载并且执行完之后进行的，这是因为如果在加载js脚本之前找js的方法是肯定找不到的。context_是Global<Context>类型，process_是Global<Function>类型，这两个全局类型的对象其实是用来保存当前的上下文环境和需要以后来执行的方法的句柄的。以后我们我们可以通过这两个句柄，进入到相应上下文环境中执行相应的方法。接下来看一下，我们是怎么在C++中调用在js中找出来的这个方法的，因为我们需要在onDrawFrame()的jni方法中执行绘制代码所以在onDrawFrame()的jni方法中要这样来调用：
 
-    ``` java
+    ```cpp
         // Create a handle scope to keep the temporary object references.
     HandleScope handle_scope(v8Helper::GetIsolate());
 
@@ -79,7 +79,7 @@
 
 js调用C++的方法就比较容易了
 
-    ```java
+    ```cpp
     v8Helper::Initialize();
     Isolate::Scope isolate_scope(v8Helper::GetIsolate());
     // Create a stack-allocated handle scope.
@@ -102,7 +102,7 @@ js调用C++的方法就比较容易了
 
 可以看到在创建一个新的上下文环境的时候这里直接creatTestContext(v8Helper::GetIsolate());其实是做了两个操作如下
 
-    ```java
+    ```cpp
      // Creates a new execution environment containing the built-in functions.
    
     v8::Local<v8::Context> CreateShellContext(v8::Isolate* isolate) {
@@ -139,7 +139,7 @@ js调用C++的方法就比较容易了
 第一种情况：
 这种情况下与调用C++普通方法的区别是js在调用C++方法的时候多了一个对象参数，由于这个参数是个C++类的对象，所以我们需要把这个C++对象封装成js对象。
 
-    ```java
+    ```cpp
      // Create a handle scope to keep the temporary object references.
     HandleScope handle_scope(v8Helper::GetIsolate());
 
@@ -167,7 +167,7 @@ js调用C++的方法就比较容易了
     }
     ```
 ****
-    ```java
+    ```cpp
      Local<Object> WrapPerson(Person *person) {
     // Local scope for temporary handles.
     EscapableHandleScope handle_scope(v8Helper::GetIsolate());
@@ -196,7 +196,7 @@ js调用C++的方法就比较容易了
 
 ****
 
-    ```java
+    ```cpp
 
     Local<ObjectTemplate> MakePersonTemplate(Isolate *isolate) {
 
@@ -229,7 +229,7 @@ js调用C++的方法就比较容易了
     ```
 
 ****
-    ```java
+    ```cpp
 
     void GetName(Local<String> name, const PropertyCallbackInfo<Value>& info) {
     // Extract the C++ request object from the JavaScript wrapper.
@@ -247,7 +247,7 @@ js调用C++的方法就比较容易了
     ```
 
 ****
-    ```java
+    ```cpp
     void SetAge(const FunctionCallbackInfo <Value> &args)
     {
     LOGI("setAge is called");
@@ -258,7 +258,7 @@ js调用C++的方法就比较容易了
     ```
 
 ****
-    ```java
+    ```cpp
     Person* UnwrapPerson(Local<Object> obj) {
     Local<External> field = Local<External>::Cast(obj->GetInternalField(0));
     void* ptr = field->Value();
@@ -280,7 +280,7 @@ js调用C++的方法就比较容易了
 第二种情况：
 在js中创建C++的对象去访问对象的属性和方法，重点是对构造函数的绑定，绑定的时机与一般函数即全局函数一样，在js文件加载之前就可绑定，注意是在creatTestContext(Isolate *isolate)这个方法中进行绑定。
 
-    ```java
+    ```cpp
 
     Local<Context> creatTestContext(Isolate *isolate) {
     Local<ObjectTemplate> global = ObjectTemplate::New(isolate);
@@ -321,7 +321,7 @@ js调用C++的方法就比较容易了
     ```
 ****
 
-    ```java 
+    ```cpp 
 
     void  PersonConstructor(const FunctionCallbackInfo <Value>& args){
     LOGI("PersonConstructor is called");
@@ -353,7 +353,7 @@ js调用C++的方法就比较容易了
 ##C++调js类##
 C++调用调用js的类与C++调用js方法有些许类似，都是在脚本加载并运行之后进行的。看一下代码会发现调用过程有点复杂，但基本套路都是一样的。
 
-    ```java 
+    ```cpp 
     v8Helper::Initialize();
     Isolate::Scope isolate_scope(v8Helper::GetIsolate());
     // Create a stack-allocated handle scope.
