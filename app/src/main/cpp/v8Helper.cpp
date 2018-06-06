@@ -401,6 +401,14 @@ bool v8Helper::c_call_js_object(const char *jsSource) {
     Local<Function> js_func = Local<Function>::Cast(js_func_ref);
     js_func->Call(obj, 0, NULL) ;
 
+    //object.z
+    //
+    Local<String> js_pro_name = String::NewFromUtf8(v8Helper::GetIsolate(), "z", NewStringType::kInternalized).ToLocalChecked();
+    Local<Value>  js_pro_ref = obj->Get(js_pro_name);
+    String::Utf8Value pro(js_pro_ref);
+    LOGI("js object prototype :%s",*pro);
+    
+
     return result;
 }
 
