@@ -330,7 +330,8 @@ function jsFunction(person){
 ```
 
 ```c++
-void  PersonConstructor(const FunctionCallbackInfo <Value>& args){
+void  PersonConstructor(const FunctionCallbackInfo <Value>& args)
+{
     LOGI("PersonConstructor is called");
     if (!args.IsConstructCall())
     {
@@ -345,12 +346,11 @@ void  PersonConstructor(const FunctionCallbackInfo <Value>& args){
     Person *person =  new Person(name,age);
 
     //Note that this index 0 is the internal field we created in the template!
-    object -> SetInternalField(0,v8::External::New(v8Helper::GetIsolate(),person));
-    }
+    object -> SetInternalField(0,v8::External::New    (v8Helper::GetIsolate(),person));
+}
 ```
 
 ```JavaScript
-
     var per = new Person("JIMI",20);
     print(per.name,per.age);
     per.setName("test");
