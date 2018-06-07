@@ -1,9 +1,7 @@
 
 # v8demo
 
-### 基于chromeV8引擎展示C++与js互调逻辑的android项目
-
-
+基于chromeV8引擎展示C++与js互调逻辑的android项目
 
 ### js调用C++的方法：
 
